@@ -2,6 +2,8 @@ const GoogleStrategy = require('passport-google-oauth20').Strategy;
 const mongoose = require('mongoose');
 const keys = require('./keys');
 
+const User = mongoose.model('users');
+
 module.exports = function(passport) {
   passport.use(
     new GoogleStrategy(
@@ -12,8 +14,32 @@ module.exports = function(passport) {
         proxy: true
       },
       (accessToken, refreshToken, profile, done) => {
-        console.log(accessToken);
-        console.log(profile);
+        // console.log(accessToken);
+        // console.log(profile);
+
+        const image = profile.photos[0].value;
+
+        const newUser = {
+          googleID: profile.id,
+          firstName: profile.name.givenName,
+          lastName: profile.name.familyName,
+          email: profile.emails[0].value,
+          image: image
+        };
+
+        console.log('==> New User: ', newUser);
+        // checking for existing user
+        User.findOne({
+          googleID: profile.id
+        }).then(user => {
+          if (user) {
+            // return user
+            done(null, user);
+          } else {
+            // Create User
+            new User(newUser).save().then(user => done(null, user));
+          }
+        });
       }
     )
   );
